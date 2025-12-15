@@ -58,13 +58,11 @@ import kotlin.math.absoluteValue
 // DATA STRUKTUR
 // ---------------------------------------------------------
 
-// Data Bab Buku
 data class Chapter(
     val title: String,
     val estimatedPage: Int
 )
 
-// Data Track Audio
 data class AudioTrack(
     val name: String,
     val resId: Int
@@ -123,7 +121,6 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        // Force Landscape agar nyaman dibaca seperti buku
         this.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
         tts = TextToSpeech(this, this)
         setContent {
@@ -178,30 +175,54 @@ class PdfState {
     // --- Audio State ---
     var mediaPlayer: MediaPlayer? by mutableStateOf(null)
     var isAudioPlaying by mutableStateOf(false)
-    var currentTrackName by mutableStateOf("") // Nama file yang sedang diputar
-    var volume by mutableFloatStateOf(0.5f) // Default Volume 50%
-    var isAudioSelectionOpen by mutableStateOf(false) // Popup pemilihan lagu
+    var currentTrackName by mutableStateOf("")
+    var volume by mutableFloatStateOf(0.5f) // Default 50%
+    var isAudioSelectionOpen by mutableStateOf(false)
 
-    // DAFTAR AUDIO (Pastikan file ada di res/raw)
+    // --- DAFTAR AUDIO MANUAL (BAB 1 - 28) ---
+    // Pastikan file bab_1.mp3 s.d bab_28.mp3 ada di res/raw
     val audioTracks = listOf(
         AudioTrack("Penjelasan Bab 1", R.raw.bab_1),
         AudioTrack("Penjelasan Bab 2", R.raw.bab_2),
         AudioTrack("Penjelasan Bab 3", R.raw.bab_3),
-        AudioTrack("Penjelasan Bab 4", R.raw.bab_4)
+        AudioTrack("Penjelasan Bab 4", R.raw.bab_4),
+        AudioTrack("Penjelasan Bab 5", R.raw.bab_5),
+        AudioTrack("Penjelasan Bab 6", R.raw.bab_6),
+        AudioTrack("Penjelasan Bab 7", R.raw.bab_7),
+        AudioTrack("Penjelasan Bab 8", R.raw.bab_8),
+        AudioTrack("Penjelasan Bab 9", R.raw.bab_9),
+        AudioTrack("Penjelasan Bab 10", R.raw.bab_10),
+        AudioTrack("Penjelasan Bab 11", R.raw.bab_11),
+        AudioTrack("Penjelasan Bab 12", R.raw.bab_12),
+        AudioTrack("Penjelasan Bab 13", R.raw.bab_13),
+        AudioTrack("Penjelasan Bab 14", R.raw.bab_14),
+        AudioTrack("Penjelasan Bab 15", R.raw.bab_15),
+        AudioTrack("Penjelasan Bab 16", R.raw.bab_16),
+        AudioTrack("Penjelasan Bab 17", R.raw.bab_17),
+        AudioTrack("Penjelasan Bab 18", R.raw.bab_18),
+        AudioTrack("Penjelasan Bab 19", R.raw.bab_19),
+        AudioTrack("Penjelasan Bab 20", R.raw.bab_20),
+        AudioTrack("Penjelasan Bab 21", R.raw.bab_21),
+        AudioTrack("Penjelasan Bab 22", R.raw.bab_22),
+        AudioTrack("Penjelasan Bab 23", R.raw.bab_23),
+        AudioTrack("Penjelasan Bab 24", R.raw.bab_24),
+        AudioTrack("Penjelasan Bab 25", R.raw.bab_25),
+        AudioTrack("Penjelasan Bab 26", R.raw.bab_26),
+        AudioTrack("Penjelasan Bab 27", R.raw.bab_27),
+        AudioTrack("Penjelasan Bab 28", R.raw.bab_28)
     )
-    // -------------------
 
+    // --- Search State ---
     var isSearchDialogOpen by mutableStateOf(false)
     var isSearchResultsOpen by mutableStateOf(false)
     var searchQuery by mutableStateOf("")
+    val searchResults = mutableStateListOf<Chapter>()
 
     var interactionMode by mutableStateOf(InteractionMode.NORMAL)
-
-    val searchResults = mutableStateListOf<Chapter>()
     val mappedChapters = mutableStateListOf<Chapter>()
     private var fileDescriptor: ParcelFileDescriptor? = null
 
-    // --- PDF LOGIC ---
+    // --- PDF FUNCTIONS ---
     suspend fun renderPage(index: Int): Bitmap? {
         return withContext(Dispatchers.IO) {
             try {
@@ -254,31 +275,25 @@ class PdfState {
         } catch (e: Exception) {}
     }
 
-    // --- AUDIO FUNCTIONS (UPDATED) ---
-
-    // 1. Putar Track Spesifik (Bab 1, 2, 3, atau 4)
+    // --- AUDIO CONTROL FUNCTIONS ---
     fun playSpecificTrack(context: Context, track: AudioTrack) {
         try {
-            releaseAudio() // Stop yang lama
-
+            releaseAudio()
             mediaPlayer = MediaPlayer.create(context, track.resId)
             mediaPlayer?.let { player ->
-                player.setVolume(volume, volume) // Set volume sesuai settingan
-                player.setOnCompletionListener {
-                    isAudioPlaying = false
-                }
+                player.setVolume(volume, volume)
+                player.setOnCompletionListener { isAudioPlaying = false }
                 player.start()
                 isAudioPlaying = true
                 currentTrackName = track.name
             }
-            isAudioSelectionOpen = false // Tutup dialog
+            isAudioSelectionOpen = false
         } catch (e: Exception) {
             e.printStackTrace()
-            Toast.makeText(context, "Gagal memutar audio. Pastikan file ada di res/raw", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, "File audio rusak atau tidak ditemukan", Toast.LENGTH_SHORT).show()
         }
     }
 
-    // 2. Play/Pause Toggle
     fun toggleAudio() {
         mediaPlayer?.let { player ->
             if (player.isPlaying) {
@@ -290,17 +305,14 @@ class PdfState {
             }
             return
         }
-        // Jika belum ada lagu, buka menu pilih lagu
         isAudioSelectionOpen = true
     }
 
-    // 3. Atur Volume
     fun adjustVolume(delta: Float) {
-        volume = (volume + delta).coerceIn(0f, 1f) // Limit antara 0.0 - 1.0
+        volume = (volume + delta).coerceIn(0f, 1f)
         mediaPlayer?.setVolume(volume, volume)
     }
 
-    // 4. Bersihkan Audio
     fun releaseAudio() {
         mediaPlayer?.stop()
         mediaPlayer?.release()
@@ -328,12 +340,11 @@ fun FlipbookApp(tts: TextToSpeech?) {
         uri?.let { scope.launch { loadPdfFromUri(context, it, state) } }
     }
 
-    // Load Default PDF
+    // Initialize: Load PDF
     LaunchedEffect(Unit) {
         if (state.pdfRenderer == null) loadPdfFromAssets(context, "rpal.pdf", state)
     }
 
-    // Cleanup Audio saat layar ditutup
     DisposableEffect(Unit) {
         onDispose { state.releaseAudio() }
     }
@@ -347,7 +358,6 @@ fun FlipbookApp(tts: TextToSpeech?) {
         state.interactionMode = InteractionMode.NORMAL
     }
 
-    // Sinkronisasi tombol prev/next dengan Pager
     LaunchedEffect(state.currentSpreadIndex) {
         if (pagerState.currentPage != state.currentSpreadIndex && state.totalSpreads > 0) {
             pagerState.scrollToPage(state.currentSpreadIndex)
@@ -376,12 +386,11 @@ fun FlipbookApp(tts: TextToSpeech?) {
                 HorizontalPager(
                     state = pagerState,
                     modifier = Modifier.fillMaxSize(),
-                    userScrollEnabled = state.scale == 1f, // Disable swipe saat zoom
+                    userScrollEnabled = state.scale == 1f,
                     contentPadding = PaddingValues(0.dp),
                     pageSpacing = 0.dp
                 ) { spreadIndex ->
-
-                    // --- ANIMASI 3D BUKU ---
+                    // Efek 3D Flip
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -404,7 +413,7 @@ fun FlipbookApp(tts: TextToSpeech?) {
                 CircularProgressIndicator(color = Color.White)
             }
 
-            // --- DIALOGS ---
+            // Dialogs
             if (state.isSearchDialogOpen) {
                 SearchInputDialog(state, { state.isSearchDialogOpen = false }, { state.performLinearSearch(context, it) })
             }
@@ -455,13 +464,11 @@ fun BookSpreadPage(spreadIndex: Int, state: PdfState) {
                     onTap = { tapOffset ->
                         val currentScale = state.scale
                         var newScale = currentScale
-
                         when (state.interactionMode) {
                             InteractionMode.ZOOM_IN -> newScale = (currentScale + 0.75f).coerceAtMost(4f)
                             InteractionMode.ZOOM_OUT -> newScale = (currentScale - 0.75f).coerceAtLeast(1f)
                             else -> return@detectTapGestures
                         }
-
                         if (newScale <= 1f) {
                             state.scale = 1f
                             state.offsetX = 0f
@@ -469,8 +476,6 @@ fun BookSpreadPage(spreadIndex: Int, state: PdfState) {
                             state.interactionMode = InteractionMode.NORMAL
                             return@detectTapGestures
                         }
-
-                        // Zoom Logic Center
                         val zoomFactor = newScale / currentScale
                         if (newScale > currentScale) {
                             val centerX = containerSize.width / 2f
@@ -483,7 +488,6 @@ fun BookSpreadPage(spreadIndex: Int, state: PdfState) {
                             state.offsetX *= zoomFactor
                             state.offsetY *= zoomFactor
                         }
-
                         state.scale = newScale
                         val maxX = (containerSize.width * state.scale - containerSize.width) / 2
                         val maxY = (containerSize.height * state.scale - containerSize.height) / 2
@@ -560,15 +564,13 @@ fun SearchInputDialog(state: PdfState, onDismiss: () -> Unit, onSearch: (String)
         onDismissRequest = onDismiss,
         title = { Text("Cari Bab/Materi") },
         text = {
-            Column {
-                OutlinedTextField(
-                    value = state.searchQuery,
-                    onValueChange = { state.searchQuery = it },
-                    label = { Text("Contoh: 'Manusia'") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
+            OutlinedTextField(
+                value = state.searchQuery,
+                onValueChange = { state.searchQuery = it },
+                label = { Text("Contoh: 'Manusia'") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
         },
         confirmButton = { Button(onClick = { onSearch(state.searchQuery) }) { Text("Cari") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Batal") } }
@@ -609,31 +611,35 @@ fun AudioSelectionDialog(state: PdfState, context: Context, onDismiss: () -> Uni
         onDismissRequest = onDismiss,
         title = { Text("Pilih Suara Penjelasan") },
         text = {
-            LazyColumn(
-                modifier = Modifier.heightIn(max = 300.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(state.audioTracks) { track ->
-                    Card(
-                        onClick = { state.playSpecificTrack(context, track) },
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (state.currentTrackName == track.name)
-                                MaterialTheme.colorScheme.primaryContainer
-                            else
-                                MaterialTheme.colorScheme.surfaceVariant
-                        ),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
+            if (state.audioTracks.isEmpty()) {
+                Text("Daftar audio kosong.", color = Color.Red)
+            } else {
+                LazyColumn(
+                    modifier = Modifier.heightIn(max = 300.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(state.audioTracks) { track ->
+                        Card(
+                            onClick = { state.playSpecificTrack(context, track) },
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (state.currentTrackName == track.name)
+                                    MaterialTheme.colorScheme.primaryContainer
+                                else
+                                    MaterialTheme.colorScheme.surfaceVariant
+                            ),
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            Icon(Icons.Default.Audiotrack, contentDescription = null)
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(track.name, style = MaterialTheme.typography.bodyMedium)
-                            if (state.currentTrackName == track.name && state.isAudioPlaying) {
-                                Spacer(Modifier.weight(1f))
-                                Icon(Icons.Default.VolumeUp, "Playing", tint = MaterialTheme.colorScheme.primary)
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.Audiotrack, contentDescription = null)
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(track.name, style = MaterialTheme.typography.bodyMedium)
+                                if (state.currentTrackName == track.name && state.isAudioPlaying) {
+                                    Spacer(Modifier.weight(1f))
+                                    Icon(Icons.Default.VolumeUp, "Playing", tint = MaterialTheme.colorScheme.primary)
+                                }
                             }
                         }
                     }
@@ -653,70 +659,49 @@ fun BottomControls(state: PdfState, onSearchClick: () -> Unit, onFileClick: () -
         contentColor = Color.White,
         modifier = Modifier.height(64.dp)
     ) {
-        // --- SEARCH ---
+        // Search
         IconButton(onClick = onSearchClick) {
             Icon(Icons.Default.Search, "Cari Bab", tint = Color(0xFFFFD54F))
         }
 
         Spacer(Modifier.width(8.dp))
 
-        // --- VOLUME CONTROLS (BARU) ---
+        // Volume Controls
         IconButton(onClick = { state.adjustVolume(-0.1f) }) {
             Icon(Icons.Default.VolumeDown, "Vol -", tint = Color.White)
         }
-
-        // Indikator Volume Sederhana (Text)
         Text(
             text = "${(state.volume * 100).toInt()}%",
             style = MaterialTheme.typography.labelSmall,
             color = Color.White,
             modifier = Modifier.width(32.dp).wrapContentWidth(Alignment.CenterHorizontally)
         )
-
         IconButton(onClick = { state.adjustVolume(0.1f) }) {
             Icon(Icons.Default.VolumeUp, "Vol +", tint = Color.White)
         }
 
         Spacer(Modifier.width(8.dp))
 
-        // --- PLAY / AUDIO SELECT ---
+        // Play/Pause & Playlist
         IconButton(onClick = { state.toggleAudio() }) {
             val icon = if (state.isAudioPlaying) Icons.Default.Pause else Icons.Default.PlayArrow
             val tintColor = if (state.isAudioPlaying) Color.Green else Color.White
-
-            Box(contentAlignment = Alignment.Center) {
-                Icon(imageVector = icon, contentDescription = "Audio", tint = tintColor)
-            }
+            Icon(imageVector = icon, contentDescription = "Audio", tint = tintColor)
         }
-
-        // Tombol Playlist (Ganti Bab Suara)
         IconButton(onClick = { state.isAudioSelectionOpen = true }) {
             Icon(Icons.Default.QueueMusic, "Ganti Track", tint = Color(0xFF80CBC4))
         }
 
-        // --- ZOOM CONTROLS ---
         Spacer(Modifier.width(16.dp))
-        IconButton(onClick = {
-            state.interactionMode = if (state.interactionMode == InteractionMode.ZOOM_OUT) InteractionMode.NORMAL else InteractionMode.ZOOM_OUT
-        }) {
-            Icon(
-                imageVector = Icons.Default.ZoomOut,
-                contentDescription = "Mode Perkecil",
-                tint = if (state.interactionMode == InteractionMode.ZOOM_OUT) Color.Yellow else Color.White
-            )
+
+        // Zoom & Navigation
+        IconButton(onClick = { state.interactionMode = if (state.interactionMode == InteractionMode.ZOOM_OUT) InteractionMode.NORMAL else InteractionMode.ZOOM_OUT }) {
+            Icon(Icons.Default.ZoomOut, "Mode Perkecil", tint = if (state.interactionMode == InteractionMode.ZOOM_OUT) Color.Yellow else Color.White)
+        }
+        IconButton(onClick = { state.interactionMode = if (state.interactionMode == InteractionMode.ZOOM_IN) InteractionMode.NORMAL else InteractionMode.ZOOM_IN }) {
+            Icon(Icons.Default.ZoomIn, "Mode Perbesar", tint = if (state.interactionMode == InteractionMode.ZOOM_IN) Color.Yellow else Color.White)
         }
 
-        IconButton(onClick = {
-            state.interactionMode = if (state.interactionMode == InteractionMode.ZOOM_IN) InteractionMode.NORMAL else InteractionMode.ZOOM_IN
-        }) {
-            Icon(
-                imageVector = Icons.Default.ZoomIn,
-                contentDescription = "Mode Perbesar",
-                tint = if (state.interactionMode == InteractionMode.ZOOM_IN) Color.Yellow else Color.White
-            )
-        }
-
-        // --- NAVIGATION & INFO ---
         Spacer(Modifier.width(16.dp))
         IconButton(onClick = { if (state.currentSpreadIndex > 0) state.currentSpreadIndex-- }) {
             Icon(Icons.Default.ArrowBack, "Prev")
@@ -745,7 +730,7 @@ fun BottomControls(state: PdfState, onSearchClick: () -> Unit, onFileClick: () -
 }
 
 // ---------------------------------------------------------
-// 5. HELPER LOAD FILES
+// 5. HELPER LOAD
 // ---------------------------------------------------------
 
 suspend fun loadPdfFromAssets(context: Context, fileName: String, state: PdfState) {
@@ -780,8 +765,6 @@ suspend fun loadPdfFromUri(context: Context, uri: Uri, state: PdfState) {
             inputStream?.close()
             outputStream.close()
             withContext(Dispatchers.Main) { state.openPdf(tempFile) }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        } catch (e: Exception) { e.printStackTrace() }
     }
 }
